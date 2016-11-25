@@ -1,11 +1,44 @@
 const url = require("url");
 
-exports.req = function(req, res) {
+const Scribe = function(params = {}) {
+    
+    this.params = {
+	removeIPv4Prefix: params.removeIPv4Prefix || false
+    }
+    
+    if (!(this instanceof Scribe)) {
+	return this.req;
+    }
+}
+
+Scribe.prototype.req = function(req, res, next) {
     const endpoint = url.parse(req.url).pathname,
-	  ip = req.connection.remoteAddress;
+	  ip = this.parseIP(req.connection.remoteAddress);
     res.on("finish", function() {
 	console.log(`${ip} ${endpoint} ${colorStatusCode(res.statusCode)}`);
     });
+    if (typeof next === "function") {
+	next();
+    }
+}
+
+Scribe.prototype.parseIP = function(ip) {
+    let output = ip;
+    if (this.params.removeIPv4Prefix && (/^::ffff:/).test(ip)) {
+	output = output.slice(7);
+    }
+    return output;
+}
+
+Scribe.prototype.socketRequest = function(req, isAccepted) {
+    const response = (isAccepted) ? "\x1b[32mAccepted\x1b[0m" :
+	  "\x1b[31mRejected\x1b[0m";
+    console.log((new Date()) + ` Connection from ${req.origin} ${response}`);
+};
+
+Scribe.prototype.socketClose = function(reasonCode, description) {
+    console.log((new Date()) + ` ${this.remoteAddress} disconnected - ` +
+		`${reasonCode} ${description}`);
 }
 
 function colorStatusCode(statusCode) {
@@ -29,13 +62,4 @@ const coloredCodes = {
     550: "\x1b[31m550\x1b[0m"    
 }
 
-exports.socketRequest = function(req, isAccepted) {
-    const response = (isAccepted) ? "\x1b[32mAccepted\x1b[0m" :
-	  "\x1b[31mRejected\x1b[0m";
-    console.log((new Date()) + ` Connection from ${req.origin} ${response}`);
-};
-
-exports.socketClose = function(reasonCode, description) {
-    console.log((new Date()) + ` ${this.remoteAddress} disconnected - ` +
-		`${reasonCode} ${description}`);
-}
+module.exports = Scribe;
