@@ -1,33 +1,26 @@
 const url = require("url");
 
 const Scribe = function(params = {}) {
-    
     this.params = {
 	removeIPv4Prefix: params.removeIPv4Prefix || false
     }
     
     if (!(this instanceof Scribe)) {
-	return this.req;
+	// returns single function when called as middleware
+	return (new Scribe(params)).req;
     }
-}
 
-Scribe.prototype.req = function(req, res, next) {
-    const endpoint = url.parse(req.url).pathname,
-	  ip = this.parseIP(req.connection.remoteAddress);
-    res.on("finish", function() {
-	console.log(`${ip} ${endpoint} ${colorStatusCode(res.statusCode)}`);
-    });
-    if (typeof next === "function") {
-	next();
+    this.req = function(req, res, next) {
+	const endpoint = url.parse(req.url).pathname;
+	const ip = (this.params.removeIPv4Prefix) ?
+	      removeIPPrefix(req.connection.remoteAddress) : ip;
+	res.on("finish", function() {
+	    console.log(`${ip} ${endpoint} ${colorStatusCode(res.statusCode)}`);
+	});
+	if (typeof(next) === "function") {
+	    next();
+	}
     }
-}
-
-Scribe.prototype.parseIP = function(ip) {
-    let output = ip;
-    if (this.params.removeIPv4Prefix && (/^::ffff:/).test(ip)) {
-	output = output.slice(7);
-    }
-    return output;
 }
 
 Scribe.prototype.socketRequest = function(req, isAccepted) {
@@ -40,6 +33,12 @@ Scribe.prototype.socketClose = function(reasonCode, description) {
     console.log((new Date()) + ` ${this.remoteAddress} disconnected - ` +
 		`${reasonCode} ${description}`);
 }
+
+function removeIPPrefix(ip) {
+    // removes "::ffff:" IPv6 prefix from IPv4 addresses
+    return ip.slice(7)
+}
+
 
 function colorStatusCode(statusCode) {
     return coloredCodes[statusCode] || statusCode;
