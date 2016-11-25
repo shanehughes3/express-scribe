@@ -1,7 +1,7 @@
 {
   "name": "express-scribe",
   "version": "0.0.1",
-  "description": "",
+  "description": "Basic Node.js logging",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
