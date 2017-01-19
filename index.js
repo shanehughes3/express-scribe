@@ -13,9 +13,10 @@ const Scribe = function(params = {}) {
     this.req = function(req, res, next) {
 	const endpoint = url.parse(req.url).pathname;
 	const ip = (this.params.removeIPv4Prefix) ?
-	      removeIPPrefix(req.connection.remoteAddress) : ip;
+	           removeIPPrefix(req.connection.remoteAddress) : ip;
+        const method = req.method;
 	res.on("finish", function() {
-	    console.log(`${ip} ${endpoint} ${colorStatusCode(res.statusCode)}`);
+	    console.log(`${ip} ${method} ${endpoint} ${colorStatusCode(res.statusCode)}`);
 	});
 	if (typeof(next) === "function") {
 	    next();
